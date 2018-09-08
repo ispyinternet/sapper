@@ -405,6 +405,8 @@ function get_page_handler(
 				 */
 				const listenAddress = req.socket.server.address();
 
+				let fetchUrl;
+
 				if(typeof listenAddress == 'string') {
 					fetchUrl = `unix:${listenAddress}:${parsed.pathname}${parsed.hash}`;
 				} else {

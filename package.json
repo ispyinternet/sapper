@@ -6,15 +6,7 @@
   "bin": {
     "sapper": "./sapper"
   },
-  "files": [
-    "*.js",
-    "runtime",
-    "webpack",
-    "config",
-    "sapper",
-    "components",
-    "dist/*.js"
-  ],
+
   "directories": {
     "test": "test"
   },
