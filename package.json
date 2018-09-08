@@ -17,7 +17,7 @@
     "config",
     "sapper",
     "components",
-    "dist/*.js".
+    "dist/*.js",
     "src/*",
     "tsconfig.json"
   ],
