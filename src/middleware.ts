@@ -350,6 +350,7 @@ function get_page_handler(
 				preload_error = { statusCode, message };
 			},
 			fetch: (url: string, opts?: any) => {
+
 				const parsed = new URL(url, `http://127.0.0.1:${process.env.PORT}${req.baseUrl ? req.baseUrl + '/' :''}`);
 
 				if (opts) {
@@ -381,7 +382,36 @@ function get_page_handler(
 					}
 				}
 
-				return fetch(parsed.href, opts);
+				/**
+				 * support for running sapper on servers with a socket file
+				 *
+				 * http servers can listen on a socket file instead of tcp port
+				 * lambda is one such case, see socketPath:
+				 * https://nodejs.org/api/http.html#http_request_socket
+				 *
+				 * Use the following URL scheme:
+				 *
+				 * PROTOCOL://unix:SOCKET:PATH.
+				 *
+				 * PROTOCOL - http or https (optional)
+				 * SOCKET - Absolute path to a unix domain socket, for example: /var/run/docker.sock
+				 * PATH - Request path, for example: /v2/keys
+				 *
+				 * this fix checks to see if the server is running in this mode
+				 * and if so, modifies the url string
+				 *
+				 * also requires a modified version of node-fetch
+				 * see https://github.com/ispyinternet/node-fetch
+				 */
+				const listenAddress = req.socket.server.address();
+
+				if(typeof listenAddress == 'string') {
+					fetchUrl = `unix:${listenAddress}:${parsed.pathname}${parsed.hash}`;
+				} else {
+					fetchUrl = parsed.href;
+				}
+
+				return fetch(fetchUrl, opts);
 			},
 			store
 		};
