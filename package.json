@@ -16,10 +16,10 @@
     "webpack",
     "config",
     "sapper",
-    "components",
-    "dist/*.js",
-    "src/*",
-    "tsconfig.json"
+    "components"
+    /* "dist/*.js",
+     "src/*",
+     "tsconfig.json" */
   ],
   "dependencies": {
     "html-minifier": "^3.5.16",
@@ -78,6 +78,7 @@
     "pretest": "npm run build",
     "build": "rm -rf dist && rollup -c",
     "dev": "rollup -cw",
+    "prepare": "npm run build",
     "prepublishOnly": "npm test",
     "update_mime_types": "curl http://svn.apache.org/repos/asf/httpd/httpd/trunk/docs/conf/mime.types | grep -e \"^[^#]\" > src/middleware/mime-types.md"
   },
