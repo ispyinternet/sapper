@@ -17,9 +17,7 @@
     "config",
     "sapper",
     "components"
-    /* "dist/*.js",
-     "src/*",
-     "tsconfig.json" */
+
   ],
   "dependencies": {
     "html-minifier": "^3.5.16",
