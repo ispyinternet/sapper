@@ -15,6 +15,7 @@ import * as events from './interfaces';
 import validate_bundler from '../cli/utils/validate_bundler';
 import { copy_shimport } from './utils/copy_shimport';
 import { ManifestData } from '../interfaces';
+import read_template from '../core/read_template';
 
 export function dev(opts) {
 	return new Watcher(opts);
@@ -23,7 +24,7 @@ export function dev(opts) {
 class Watcher extends EventEmitter {
 	bundler: string;
 	dirs: {
-		app: string;
+		src: string;
 		dest: string;
 		routes: string;
 		rollup: string;
@@ -35,6 +36,8 @@ class Watcher extends EventEmitter {
 	dev_port: number;
 	live: boolean;
 	hot: boolean;
+
+	devtools_port: number;
 
 	dev_server: DevServer;
 	proc: child_process.ChildProcess;
@@ -51,23 +54,25 @@ class Watcher extends EventEmitter {
 	}
 
 	constructor({
-		app = locations.app(),
+		src = locations.src(),
 		dest = locations.dest(),
 		routes = locations.routes(),
 		'dev-port': dev_port,
 		live,
 		hot,
+		'devtools-port': devtools_port,
 		bundler,
 		webpack = 'webpack',
 		rollup = 'rollup',
 		port = +process.env.PORT
 	}: {
-		app: string,
+		src: string,
 		dest: string,
 		routes: string,
 		'dev-port': number,
 		live: boolean,
 		hot: boolean,
+		'devtools-port': number,
 		bundler?: string,
 		webpack: string,
 		rollup: string,
@@ -76,13 +81,15 @@ class Watcher extends EventEmitter {
 		super();
 
 		this.bundler = validate_bundler(bundler);
-		this.dirs = { app, dest, routes, webpack, rollup };
+		this.dirs = { src, dest, routes, webpack, rollup };
 		this.port = port;
 		this.closed = false;
 
 		this.dev_port = dev_port;
 		this.live = live;
 		this.hot = hot;
+
+		this.devtools_port = devtools_port;
 
 		this.filewatchers = [];
 
@@ -94,7 +101,7 @@ class Watcher extends EventEmitter {
 		};
 
 		// remove this in a future version
-		const template = fs.readFileSync(path.join(app, 'template.html'), 'utf-8');
+		const template = read_template();
 		if (template.indexOf('%sapper.base%') === -1) {
 			const error = new Error(`As of Sapper v0.10, your template.html file must include %sapper.base% in the <head>`);
 			error.code = `missing-sapper-base`;
@@ -128,6 +135,9 @@ class Watcher extends EventEmitter {
 		if (this.bundler === 'rollup') copy_shimport(dest);
 
 		if (!this.dev_port) this.dev_port = await ports.find(10000);
+
+		// Chrome looks for debugging targets on ports 9222 and 9229 by default
+		if (!this.devtools_port) this.devtools_port = await ports.find(9222);
 
 		let manifest_data: ManifestData;
 
@@ -166,7 +176,7 @@ class Watcher extends EventEmitter {
 				}
 			),
 
-			fs.watch(`${locations.app()}/template.html`, () => {
+			fs.watch(`${locations.src()}/template.html`, () => {
 				this.dev_server.send({
 					action: 'reload'
 				});
@@ -176,7 +186,7 @@ class Watcher extends EventEmitter {
 		let deferred = new Deferred();
 
 		// TODO watch the configs themselves?
-		const compilers: Compilers = create_compilers(this.bundler, this.dirs);
+		const compilers: Compilers = await create_compilers(this.bundler, this.dirs);
 
 		let log = '';
 
@@ -238,12 +248,21 @@ class Watcher extends EventEmitter {
 						restart();
 					}
 
+					// we need to give the child process its own DevTools port,
+					// otherwise Node will try to use the parent's (and fail)
+					const debugArgRegex = /--inspect(?:-brk|-port)?|--debug-port/;
+					const execArgv = process.execArgv.slice();
+					if (execArgv.some((arg: string) => !!arg.match(debugArgRegex))) {
+						execArgv.push(`--inspect-port=${this.devtools_port}`);
+					}
+
 					this.proc = child_process.fork(`${dest}/server.js`, [], {
 						cwd: process.cwd(),
 						env: Object.assign({
 							PORT: this.port
 						}, process.env),
-						stdio: ['ipc']
+						stdio: ['ipc'],
+						execArgv
 					});
 
 					this.proc.stdout.on('data', chunk => {

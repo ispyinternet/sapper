@@ -1,6 +1,6 @@
 {
   "name": "sapper",
-  "version": "0.20.3",
+  "version": "0.21.1",
   "description": "Military-grade apps, engineered by Svelte",
   "main": "dist/middleware.js",
   "bin": {
@@ -75,6 +75,7 @@
     "test": "mocha --opts mocha.opts",
     "pretest": "npm run build",
     "build": "rm -rf dist && rollup -c",
+    "prepare": "npm run build",
     "dev": "rollup -cw",
     "prepare": "npm run build",
     "prepublishOnly": "npm test",

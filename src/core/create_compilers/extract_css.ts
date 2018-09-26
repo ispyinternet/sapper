@@ -4,6 +4,7 @@ import hash from 'string-hash';
 import * as codec from 'sourcemap-codec';
 import { PageComponent, Dirs } from '../../interfaces';
 import { CompileResult } from './interfaces';
+import { posixify } from '../utils'
 
 const inline_sourcemap_header = 'data:application/json;charset=utf-8;base64,';
 
@@ -75,7 +76,7 @@ export default function extract_css(client_result: CompileResult, components: Pa
 	const component_owners = new Map();
 	client_result.chunks.forEach(chunk => {
 		chunk.modules.forEach(module => {
-			const component = path.relative(dirs.routes, module);
+			const component = posixify(path.relative(dirs.routes, module));
 			component_owners.set(component, chunk);
 		});
 	});
@@ -169,7 +170,8 @@ export default function extract_css(client_result: CompileResult, components: Pa
 		return null;
 	}
 
-	const main = client_result.assets.main;
+	let main = client_result.assets.main;
+	if (process.env.SAPPER_LEGACY_BUILD) main = `legacy/${main}`;
 	const entry = fs.readFileSync(`${dirs.dest}/client/${main}`, 'utf-8');
 
 	const replacements = new Map();
